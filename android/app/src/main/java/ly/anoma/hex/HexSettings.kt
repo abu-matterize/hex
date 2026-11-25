@@ -228,22 +228,11 @@ internal fun HexSettings(setup: Setup, speech: SpeechPreferences, typing: Typing
                 .padding(horizontal = 20.dp).padding(top = 12.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Column {
-                    Row(Modifier.heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (page == Page.Home) Image(painterResource(R.drawable.hex_mark), null, Modifier.size(27.dp),
-                            colorFilter = ColorFilter.tint(colorResource(R.color.ink)))
-                        else Box(Modifier.size(44.dp).clickable(role = Role.Button) { open(page.parent) },
-                            contentAlignment = Alignment.CenterStart) {
-                            Image(painterResource(R.drawable.ic_back), stringResource(R.string.back), Modifier.size(24.dp),
-                                colorFilter = ColorFilter.tint(colorResource(R.color.ink)))
-                        }
-                        if (page == Page.Home) Spacer(Modifier.width(10.dp))
-                        Label(when {
-                            page == Page.Licence -> licence
-                            page == Page.Feedback && Feedback.phase is Feedback.Phase.Sent -> stringResource(R.string.feedback_thanks_title)
-                            else -> stringResource(page.title)
-                        }, size = 26, weight = FontWeight.SemiBold,
-                            lines = 2, mod = Modifier.semantics { heading() })
-                    }
+                    SettingsTitle(when {
+                        page == Page.Licence -> licence
+                        page == Page.Feedback && Feedback.phase is Feedback.Phase.Sent -> stringResource(R.string.feedback_thanks_title)
+                        else -> stringResource(page.title)
+                    }, back = if (page == Page.Home) null else ({ open(page.parent) }))
                     if (page == Page.Home) {
                         val steps = listOf(setup.mic, setup.chosen).count { !it }
                         val status = when {
@@ -263,19 +252,12 @@ internal fun HexSettings(setup: Setup, speech: SpeechPreferences, typing: Typing
                 }
                 when (page) {
                     Page.Home -> {
-                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(colorResource(R.color.ink))
-                            .height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.weight(1f).fillMaxHeight().clickable(phase != SpeechPhase.Transcribing, role = Role.Button) { dictate() },
-                                contentAlignment = Alignment.Center) {
-                                Label(stringResource(when (phase) {
-                                    SpeechPhase.Idle -> R.string.home_dictate
-                                    SpeechPhase.Transcribing -> R.string.home_transcribing
-                                    else -> R.string.home_finish
-                                }), inverted = true, weight = FontWeight.SemiBold)
-                            }
-                            if (phase != SpeechPhase.Idle) Box(Modifier.fillMaxHeight().width(68.dp).clickable(role = Role.Button) { cancel() },
-                                contentAlignment = Alignment.Center) { Label(stringResource(R.string.home_cancel), inverted = true, size = 14) }
-                        }
+                        DictationBar(stringResource(when (phase) {
+                            SpeechPhase.Idle -> R.string.home_dictate
+                            SpeechPhase.Transcribing -> R.string.home_transcribing
+                            else -> R.string.home_finish
+                        }), primary = if (phase == SpeechPhase.Transcribing) null else dictate,
+                            cancel = if (phase == SpeechPhase.Idle) null else cancel)
                         if (transcript.isNotEmpty()) Card(Modifier.onGloballyPositioned {
                             transcriptCard = it.boundsInWindow()
                             transcriptCut = transcriptCard!!.height < it.size.height - 1 || transcriptCard!!.width < it.size.width - 1
@@ -654,6 +636,44 @@ internal fun HexSettings(setup: Setup, speech: SpeechPreferences, typing: Typing
         lineHeight = (size + 5).sp, color = colorResource(if (inverted) R.color.page else if (muted) R.color.quiet else R.color.ink)),
         maxLines = lines, overflow = TextOverflow.Ellipsis)
 }
+
+@Composable internal fun SettingsTitle(title: String, back: (() -> Unit)? = null) {
+    val tint = ColorFilter.tint(colorResource(R.color.ink))
+    Row(Modifier.heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (back == null) {
+            Image(painterResource(R.drawable.hex_mark), null, Modifier.size(27.dp), colorFilter = tint)
+            Spacer(Modifier.width(10.dp))
+        } else Box(Modifier.size(44.dp).clickable(role = Role.Button, onClick = back),
+            contentAlignment = Alignment.CenterStart) {
+            Image(painterResource(R.drawable.ic_back), stringResource(R.string.back), Modifier.size(24.dp), colorFilter = tint)
+        }
+        Label(title, size = 26, weight = FontWeight.SemiBold, lines = 2, mod = Modifier.semantics { heading() })
+    }
+}
+
+@Composable internal fun DictationBar(title: String, primary: (() -> Unit)?, cancel: (() -> Unit)? = null,
+                                      cancelTitle: String = stringResource(R.string.home_cancel)) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(colorResource(R.color.ink))
+        .height(52.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f).fillMaxHeight().clickable(primary != null, role = Role.Button) { primary?.invoke() },
+            contentAlignment = Alignment.Center) {
+            Label(title, inverted = true, weight = FontWeight.SemiBold)
+        }
+        if (cancel != null) Box(Modifier.fillMaxHeight().widthIn(min = 68.dp).clickable(role = Role.Button, onClick = cancel)
+            .padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+            Label(cancelTitle, inverted = true, size = 14)
+        }
+    }
+}
+
+@Composable internal fun SettingsField(value: String, hint: String, singleLine: Boolean = true, change: (String) -> Unit) {
+    val ink = colorResource(R.color.ink)
+    BasicTextField(value = value, onValueChange = change, singleLine = singleLine, maxLines = if (singleLine) 1 else 4,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+        textStyle = TextStyle(color = ink, fontFamily = inter, fontSize = 16.sp), cursorBrush = SolidColor(ink),
+        decorationBox = { field -> Box { if (value.isEmpty()) Label(hint, muted = true); field() } })
+}
+
 /** Plain text as paragraphs: hard-wrapped lines joined so they wrap to the screen, and a short first line
  * with no closing punctuation (the policy's section names) set as a heading. */
 @Composable private fun Document(text: String) {

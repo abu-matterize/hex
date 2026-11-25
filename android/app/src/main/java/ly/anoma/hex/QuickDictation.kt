@@ -1,15 +1,12 @@
 package ly.anoma.hex
 
 import android.Manifest
-import android.app.PendingIntent
-import android.app.StatusBarManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -21,22 +18,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ly.anoma.hex.keyboard.speechNote
 import ly.anoma.hex.speech.DictationPlace
@@ -58,18 +49,8 @@ internal object QuickDictation {
         context.packageManager.getComponentEnabledSetting(tile(context)) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
 
     /** On asks Android (13 and later) to offer the tile for Quick Settings at once; off removes it. */
-    fun setEnabled(context: Context, on: Boolean) {
-        context.packageManager.setComponentEnabledSetting(tile(context),
-            if (on) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DEFAULT,
-            PackageManager.DONT_KILL_APP)
-        if (on && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) try {
-            context.getSystemService(StatusBarManager::class.java)?.requestAddTileService(tile(context),
-                context.getString(R.string.quick_tile), Icon.createWithResource(context, R.drawable.hex_mark),
-                context.mainExecutor) {}
-        } catch (_: RuntimeException) {
-            // Android said no (or has no Quick Settings): the tile is still in Quick Settings' edit list.
-        }
-    }
+    fun setEnabled(context: Context, on: Boolean) =
+        setQuickSettingsTileEnabled(context, tile(context), on, R.string.quick_tile)
 
     /** After a dictation's text is copied: the sheet closes unless a note ([noteShown]) explains something, since
      * Android 13 and later show their own copied preview; Android 12 shows none, so the sheet says Copied a moment. */
@@ -92,15 +73,7 @@ class QuickDictationTile : TileService() {
 
     override fun onClick() {
         super.onClick()
-        open()
-    }
-
-    private fun open() {
-        val intent = Intent(this, QuickDictationActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-            startActivityAndCollapse(PendingIntent.getActivity(this, 0, intent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
-        else @Suppress("DEPRECATION") startActivityAndCollapse(intent)
+        launchFromQuickSettings(Intent(this, QuickDictationActivity::class.java))
     }
 }
 
@@ -214,23 +187,12 @@ private fun QuickSheet(phase: SpeechPhase, note: String?, copied: Boolean, micNe
                 if (line != null) Label(line, muted = note == null, size = 15, lines = 3, mod = Modifier.padding(horizontal = 4.dp))
                 if (copied && note != null) Label(stringResource(R.string.quick_copied), muted = true, size = 14,
                     lines = 2, mod = Modifier.padding(horizontal = 4.dp))
-                // Home's Dictate bar: the main action, and ✕ beside it.
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(colorResource(R.color.ink))
-                    .height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f).fillMaxHeight().clickable(phase != SpeechPhase.Transcribing, role = Role.Button,
-                        onClick = primary), contentAlignment = Alignment.Center) {
-                        Label(stringResource(when (phase) {
-                            SpeechPhase.Idle -> R.string.home_dictate
-                            SpeechPhase.Transcribing -> R.string.home_transcribing
-                            else -> R.string.home_finish
-                        }), inverted = true, weight = FontWeight.SemiBold)
-                    }
-                    Box(Modifier.fillMaxHeight().widthIn(min = 68.dp).clickable(role = Role.Button, onClick = dismiss)
-                        .padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                        Label(stringResource(if (phase == SpeechPhase.Idle) R.string.quick_close else R.string.home_cancel),
-                            inverted = true, size = 14)
-                    }
-                }
+                DictationBar(stringResource(when (phase) {
+                    SpeechPhase.Idle -> R.string.home_dictate
+                    SpeechPhase.Transcribing -> R.string.home_transcribing
+                    else -> R.string.home_finish
+                }), primary = if (phase == SpeechPhase.Transcribing) null else primary, cancel = dismiss,
+                    cancelTitle = stringResource(if (phase == SpeechPhase.Idle) R.string.quick_close else R.string.home_cancel))
                 if (micNeedsSettings) Action(stringResource(R.string.setup_settings), settings)
             }
         }

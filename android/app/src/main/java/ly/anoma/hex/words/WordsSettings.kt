@@ -7,13 +7,11 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,14 +19,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import ly.anoma.hex.Action
 import ly.anoma.hex.Card
@@ -36,8 +30,8 @@ import ly.anoma.hex.Entry
 import ly.anoma.hex.Label
 import ly.anoma.hex.R
 import ly.anoma.hex.Rule
+import ly.anoma.hex.SettingsField
 import ly.anoma.hex.Toggle
-import ly.anoma.hex.inter
 import ly.anoma.hex.speech.DictationFixStore
 import ly.anoma.hex.speech.SpeechPreferences
 import ly.anoma.hex.speech.WordReplacements
@@ -54,9 +48,9 @@ internal fun WordReplacementsPage(speech: SpeechPreferences, store: WordsStore, 
     var problem by remember { mutableStateOf<WordReplacements.Problem?>(null) }
     Label(stringResource(R.string.words_replacements_intro), muted = true, size = 14, lines = Int.MAX_VALUE)
     Card {
-        Field(heard, stringResource(R.string.words_heard_hint)) { heard = it; problem = null }
+        SettingsField(heard, stringResource(R.string.words_heard_hint)) { heard = it; problem = null }
         Rule()
-        Field(write, stringResource(R.string.words_write_hint), singleLine = false) { write = it; problem = null }
+        SettingsField(write, stringResource(R.string.words_write_hint), singleLine = false) { write = it; problem = null }
         Rule()
         Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(start = 16.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -85,14 +79,6 @@ internal fun WordReplacementsPage(speech: SpeechPreferences, store: WordsStore, 
             }
         }
     }
-}
-
-@Composable private fun Field(value: String, hint: String, singleLine: Boolean = true, change: (String) -> Unit) {
-    val ink = colorResource(R.color.ink)
-    BasicTextField(value = value, onValueChange = change, singleLine = singleLine, maxLines = if (singleLine) 1 else 4,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-        textStyle = TextStyle(color = ink, fontFamily = inter, fontSize = 16.sp), cursorBrush = SolidColor(ink),
-        decorationBox = { field -> Box { if (value.isEmpty()) Label(hint, muted = true); field() } })
 }
 
 private fun problemText(problem: WordReplacements.Problem) = when (problem) {
