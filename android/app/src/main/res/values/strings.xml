@@ -358,6 +358,7 @@
     <string name="voice_notes_read_failed">Couldn’t open your notes.</string>
     <string name="voice_notes_play_recording">Play recording</string>
     <string name="voice_notes_stop_playback">Stop playback</string>
+    <string name="voice_notes_playback_time">%1$s / %2$s</string>
     <string name="voice_notes_play_failed">Couldn’t play this recording.</string>
     <string name="voice_notes_delete">Delete note</string>
     <string name="voice_notes_delete_confirm">Delete this note?</string>

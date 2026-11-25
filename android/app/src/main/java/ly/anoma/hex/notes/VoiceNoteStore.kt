@@ -9,7 +9,7 @@ import android.database.sqlite.SQLiteOpenHelper
 import androidx.core.database.sqlite.transaction
 
 internal data class VoiceNote(val id: Long, val recordedAt: Long, val text: String, val excerpt: String,
-                              val hasRecording: Boolean)
+                              val recordingMillis: Int?)
 
 private const val RECORDINGS_TABLE = "CREATE TABLE voice_note_recordings (note_id INTEGER PRIMARY KEY, wav BLOB NOT NULL)"
 
@@ -54,12 +54,13 @@ internal class VoiceNoteStore private constructor(context: Context) : SQLiteOpen
         val arguments = if (search) arrayOf(filter) else null
         return readableDatabase.rawQuery(
             "SELECT rowid, recorded_at, body, $excerpt, " +
-                "EXISTS (SELECT 1 FROM voice_note_recordings WHERE note_id = voice_notes.rowid) " +
+                "(SELECT length(wav) FROM voice_note_recordings WHERE note_id = voice_notes.rowid) " +
                 "FROM voice_notes$where ORDER BY rowid DESC", arguments,
         ).use { rows ->
             buildList {
                 while (rows.moveToNext()) {
-                    add(VoiceNote(rows.getLong(0), rows.getLong(1), rows.getString(2), rows.getString(3), rows.getInt(4) != 0))
+                    val recordingMillis = if (rows.isNull(4)) null else voiceNoteDurationMillis(rows.getInt(4))
+                    add(VoiceNote(rows.getLong(0), rows.getLong(1), rows.getString(2), rows.getString(3), recordingMillis))
                 }
             }
         }

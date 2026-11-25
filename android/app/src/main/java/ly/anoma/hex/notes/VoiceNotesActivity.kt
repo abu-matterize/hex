@@ -36,10 +36,8 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import ly.anoma.hex.Action
 import ly.anoma.hex.Card
 import ly.anoma.hex.DictationBar
-import ly.anoma.hex.Entry
 import ly.anoma.hex.HexTheme
 import ly.anoma.hex.Label
 import ly.anoma.hex.R
@@ -226,37 +224,12 @@ private fun VoiceNotesScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
             SettingsTitle(stringResource(R.string.voice_notes), back = ::goBack)
             if (selected != null && phase == SpeechPhase.Idle) {
-                Card(Modifier.weight(1f, fill = false)) {
-                    if (selected.hasRecording) {
-                        val action = if (playback.current == selected.id) R.string.voice_notes_stop_playback
-                            else R.string.voice_notes_play_recording
-                        val error = if (playback.failed == selected.id) stringResource(R.string.voice_notes_play_failed) else null
-                        Entry(stringResource(action), note = error, value = "", action = { playback.toggle(selected.id) })
-                        Rule()
-                    }
-                    SelectionContainer(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
-                        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Label(date(selected), muted = true, size = 13)
-                            Label(selected.text, lines = Int.MAX_VALUE)
-                        }
-                    }
-                    Rule()
-                    if (confirmingDelete) {
-                        Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(start = 16.dp, end = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Label(stringResource(R.string.voice_notes_delete_confirm), size = 14,
-                                lines = 3, mod = Modifier.weight(1f))
-                            Action(stringResource(R.string.home_cancel)) { confirmingDelete = false }
-                            Action(stringResource(R.string.voice_notes_delete)) {
-                                delete(selected.id)
-                                confirmingDelete = false
-                                selectedId = null
-                            }
-                        }
-                    } else Row(Modifier.padding(horizontal = 4.dp)) {
-                        Action(stringResource(R.string.voice_notes_delete)) { confirmingDelete = true }
-                    }
-                }
+                VoiceNoteDetail(selected, date(selected), playback, confirmingDelete,
+                    confirmDelete = { confirmingDelete = it }, delete = {
+                        delete(selected.id)
+                        confirmingDelete = false
+                        selectedId = null
+                    })
             } else {
                 val (title, primary) = when {
                     saving -> R.string.voice_notes_saving to null

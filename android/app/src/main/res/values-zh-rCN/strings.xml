@@ -328,6 +328,7 @@
     <string name="voice_notes_read_failed">无法打开笔记。</string>
     <string name="voice_notes_play_recording">播放录音</string>
     <string name="voice_notes_stop_playback">停止播放</string>
+    <string name="voice_notes_playback_time">%1$s / %2$s</string>
     <string name="voice_notes_play_failed">无法播放此录音。</string>
     <string name="voice_notes_delete">删除笔记</string>
     <string name="voice_notes_delete_confirm">删除这条笔记？</string>

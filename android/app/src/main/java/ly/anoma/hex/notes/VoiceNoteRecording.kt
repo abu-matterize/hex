@@ -17,13 +17,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ly.anoma.hex.speech.DICTATION_SAMPLE_RATE
 
+private const val WAV_HEADER_BYTES = 44
+
+internal fun voiceNoteDurationMillis(wavBytes: Int): Int =
+    ((wavBytes - WAV_HEADER_BYTES).coerceAtLeast(0) * 1000L / (DICTATION_SAMPLE_RATE * Short.SIZE_BYTES)).toInt()
+
 /** Preserve the mic's mono PCM16 samples in a WAV Android can play. */
 internal fun voiceNoteWav(samples: ShortArray): ByteArray {
     val pcmBytes = samples.size * Short.SIZE_BYTES
-    val headerBytes = 44
-    val wav = ByteBuffer.allocate(headerBytes + pcmBytes).order(ByteOrder.LITTLE_ENDIAN)
+    val wav = ByteBuffer.allocate(WAV_HEADER_BYTES + pcmBytes).order(ByteOrder.LITTLE_ENDIAN)
     wav.put("RIFF".toByteArray(Charsets.US_ASCII))
-    wav.putInt(headerBytes - 8 + pcmBytes)
+    wav.putInt(WAV_HEADER_BYTES - 8 + pcmBytes)
     wav.put("WAVEfmt ".toByteArray(Charsets.US_ASCII))
     wav.putInt(16)
     wav.putShort(1) // PCM
@@ -61,6 +65,7 @@ internal class VoiceNotePlayback(context: Context, private val scope: CoroutineS
         .build()
     private var player: MediaPlayer? = null
     private var focus: AudioFocusRequest? = null
+    private var started = false
     var current by mutableStateOf<Long?>(null)
         private set
     var failed by mutableStateOf<Long?>(null)
@@ -112,6 +117,7 @@ internal class VoiceNotePlayback(context: Context, private val scope: CoroutineS
         focus = request
         try {
             candidate.start()
+            started = true
         } catch (_: IllegalStateException) {
             fail(candidate)
         }
@@ -124,9 +130,15 @@ internal class VoiceNotePlayback(context: Context, private val scope: CoroutineS
         failed = id
     }
 
+    fun positionMillis(id: Long): Int {
+        val active = player ?: return 0
+        return if (started && current == id) runCatching { active.currentPosition }.getOrDefault(0) else 0
+    }
+
     fun stop() {
         val previous = player
         player = null
+        started = false
         current = null
         failed = null
         previous?.release()
