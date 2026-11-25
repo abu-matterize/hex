@@ -85,6 +85,20 @@ Five unit tests passed in each of the debug and release variants. Home, the four
 
 ## Build and run
 
+Enter the headless Nix shell from the repository root on x86-64 Linux.
+
+```sh
+nix develop .#android
+cd android
+./gradlew :app:assembleDebug :app:testDebugUnitTest
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+The shell supplies JDK 21, Android SDK 36, Build Tools 35.0.0 and 36.0.0,
+NDK 27.2.12479018, CMake 3.22.1, and ADB. The first build needs network access
+for Gradle, its dependencies, the native speech engines, and the bundled model.
+Use a USB-connected ARM64 phone to run the APK.
+
 Use the Studio’s JDK 21, SDK platform 36, NDK 27.2.12479018 and CMake 3.22.1. The Play packaging checks use Build Tools 36.0.0 and bundletool 1.18.3. From the synced `android/` directory, with an ARM64 emulator or phone running:
 
 ```sh
