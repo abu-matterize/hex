@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 internal enum class SpeechPhase { Idle, Opening, Listening, Transcribing }
 
 private const val LOG_TAG = "HexSpeech"
+internal const val DICTATION_SAMPLE_RATE = 16_000
 
 /** Audio Whisper hears before the first voiced 40 ms block and after the last. A word's soft edges (an
  * initial "h" or "f", a final "s" or "t", a quiet speaker's last syllable) can sit under the voiced test's
@@ -101,11 +102,11 @@ internal class MicCapture(
     private val place: DictationPlace,
     private val update: (SpeechPhase, String?) -> Unit,
     private val meter: (Float) -> Unit,
-    /** The text, what was heard, the options it was written with and the field number [start] was given. */
-    private val insert: (String, String, SpeechOptions, Int) -> Unit,
+    /** The formatted text, raw transcript, options, field number, and original samples if [start] kept them. */
+    private val insert: (String, String, SpeechOptions, Int, ShortArray?) -> Unit,
     private val stopAfterPauseMs: Int = 0,
 ) {
-    private class Ticket(val options: SpeechOptions, val field: Int) {
+    private class Ticket(val options: SpeechOptions, val field: Int, val keepRecording: Boolean) {
         val job = jobs.incrementAndGet()
         @Volatile var finish = false
         @Volatile var cancelled = false
@@ -114,6 +115,7 @@ internal class MicCapture(
         var text: String? = null
         /** What the model heard, before formatting: Labs › Learn from my fixes follows the raw words. */
         var heard: String? = null
+        var recording: ShortArray? = null
         /** [options] in the language Labs › Automatic listens for the language chose for it, once decoded. */
         var written: SpeechOptions? = null
         // Labs › Diagnostics' last dictation: System.nanoTime of each step (0: not reached) and sample counts.
@@ -140,9 +142,9 @@ internal class MicCapture(
     val canStart get() = active == null
 
     /** [field]: the keyboard's number for the field it is spoken in, handed back with the text. */
-    fun start(options: SpeechOptions, field: Int = 0) {
+    fun start(options: SpeechOptions, field: Int = 0, keepRecording: Boolean = false) {
         if (active != null) return
-        val ticket = Ticket(options, field)
+        val ticket = Ticket(options, field, keepRecording)
         active = ticket
         publish(SpeechPhase.Opening)
         // The model loads while the person speaks, not after they let go.
@@ -217,7 +219,7 @@ internal class MicCapture(
         while (queue.firstOrNull()?.done == true) {
             val next = queue.removeFirst()
             shown = next.note ?: shown
-            next.text?.let { insert(it, next.heard ?: it, next.written ?: next.options, next.field) }
+            next.text?.let { insert(it, next.heard ?: it, next.written ?: next.options, next.field, next.recording) }
             next.spent?.let { lastDictation.value = durations(next, it, if (next.text != null) System.nanoTime() else 0L) }
         }
         publish(current(), shown)
@@ -227,7 +229,7 @@ internal class MicCapture(
     private fun durations(ticket: Ticket, spent: SpeechModel.Spent, inserted: Long): DictationTimes {
         val base = if (ticket.tickAt != 0L) ticket.tickAt else ticket.stoppedAt
         fun ms(at: Long) = (at - base) / 1_000_000
-        return DictationTimes(place, ticket.recorded * 1000L / 16_000, ticket.kept * 1000L / 16_000,
+        return DictationTimes(place, ticket.recorded * 1000L / DICTATION_SAMPLE_RATE, ticket.kept * 1000L / DICTATION_SAMPLE_RATE,
             modelAtTick(ticket.tickAt, ticket.preparedAt, ticket.prepareLoaded, spent.loaded),
             if (ticket.preparedAt != 0L) ms(ticket.preparedAt) else 0,
             ticket.tickAt != 0L, ms(ticket.stoppedAt), ms(spent.startedAt), ms(spent.endedAt),
@@ -266,11 +268,11 @@ internal class MicCapture(
     }
 
     // No audio-focus request, playback stream, device selection or communication mode.
-    // Capture dies before inference starts. No audio or transcript is written to storage.
+    // Capture dies before inference starts. The caller decides whether to save the result.
     @SuppressLint("MissingPermission")
     private fun record(ticket: Ticket) {
         if (ticket.cancelled) return
-        val rate = 16_000
+        val rate = DICTATION_SAMPLE_RATE
         val block = rate / 25
         val minBuffer = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         check(minBuffer > 0)
@@ -323,6 +325,7 @@ internal class MicCapture(
             complete(ticket, "No speech heard")
             return
         }
+        if (ticket.keepRecording) ticket.recording = pcm.copyOf(count)
         // Whisper hears the speech and its margins, at least 1.1 s (zeros after it, as before).
         val kept = span.last + 1 - span.first
         ticket.kept = kept

@@ -16,9 +16,13 @@ Tap **Skip for now** during setup if you only want to use the notes library.
 Turn on **Labs › Dictation › Voice notes**, then open **Voice notes** from
 Home. Record a note and tap **Finish dictation** or pause for three seconds
 after speaking. Hex saves the transcript and recording time in its private
-database. Audio stays in memory. Search by words or prefixes to see matching
+database. Search by words or prefixes to see matching
 excerpts, and tap a result to read or delete the full note. Recording, saving,
 and searching work offline with the bundled speech model.
+
+Turn on **Keep note recordings** in the same Labs group to save the original
+audio with new notes. Open a note and tap **Play recording**. Turning off the
+switch stops saving audio with new notes. Deleting a note removes its recording.
 
 Add **Record Hex note** to Android's Quick Settings. Android 13 and later
 offers to add it when you turn on the lab. You can also add it from the panel's

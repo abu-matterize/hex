@@ -3258,11 +3258,18 @@ Android keyboard -> English, Spanish, German, Bokmål, French and Italian typing
 │   Cancel or leave the screen to discard an unfinished recording. Hex transcribes on-device and
 │   saves the transcript and timestamp in private SQLite storage. Word and prefix searches show
 │   contextual excerpts and dates. Open the full note to read or delete it. Disabling the lab
-│   hides both entry points and preserves notes. No audio is saved. // android.voice-notes
-│   See notes/VoiceNotesActivity.kt, notes/VoiceNotesTile.kt, notes/VoiceNoteStore.kt, and speech/MicCapture.kt.
-│   VoiceNotesTest covers query escaping and silence after speech. On a Pixel 7a, the upgrade
-│   enabled the tile and removed the launcher entry. ADB added the tile to Quick Settings and
-│   confirmed Android's selected keyboard. A recording from the tile requires a live test.
+│   hides both entry points and preserves notes. // android.voice-notes
+│   Keep note recordings (off) saves the original mic samples with new notes. The note detail
+│   offers Play recording and Stop playback. Leaving the note or starting a dictation stops
+│   playback. Deleting a note deletes its recording in the same transaction. Turning off
+│   the switch stops new recordings from being kept and leaves saved recordings playable.
+│   See notes/VoiceNotesActivity.kt, notes/VoiceNotesTile.kt, notes/VoiceNoteStore.kt,
+│   notes/VoiceNoteRecording.kt, and speech/MicCapture.kt.
+│   VoiceNotesTest covers query escaping, silence after speech, and lossless WAV encoding.
+│   A SQLite fixture kept an existing text note through migration and read back and deleted a
+│   60-second recording. On a Pixel 7a, Android's SQLite driver returned that size of recording
+│   intact and MediaPlayer prepared it with the expected duration. Capture and audible playback
+│   require a live test. The earlier tile upgrade enabled the tile and removed the launcher entry.
 ├── Hands-free dictation keeps the screen on -> the keyboard's window and Home's add Android's
 │   `FLAG_KEEP_SCREEN_ON` (no permission) while a dictation is opening, listening or transcribing,
 │   and clear it once idle, so the display timing out can't hide the IME, whose leave cancels the

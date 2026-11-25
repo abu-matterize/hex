@@ -210,6 +210,9 @@ internal class SpeechPreferences(private val context: Context) {
     var learnFixes: Boolean
         get() = prefs.getBoolean("learnFixes", false)
         set(value) { prefs.edit().putBoolean("learnFixes", value).apply() }
+    var keepNoteRecordings: Boolean
+        get() = prefs.getBoolean("keepNoteRecordings", false)
+        set(value) { prefs.edit().putBoolean("keepNoteRecordings", value).apply() }
     // Labs › Signature: the line added to each keyboard dictation, off by default.
     var signature: Boolean
         get() = prefs.getBoolean("signature", false)

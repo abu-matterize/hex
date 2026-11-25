@@ -313,6 +313,8 @@
     <string name="quick_dictation_detail">在快捷设置中添加 Hex 功能块。在任何应用中点按它并说话，Hex 会复制文字供你粘贴。适用于无法使用 Hex 键盘的应用，例如工作应用。</string>
     <string name="voice_notes">语音笔记</string>
     <string name="voice_notes_detail">在本机录制和搜索笔记。在快捷设置中添加“录制 Hex 笔记”功能块。</string>
+    <string name="voice_notes_keep_recordings">保留笔记录音</string>
+    <string name="voice_notes_keep_recordings_detail">在本机保存新语音笔记的原始音频，方便回放。</string>
     <string name="voice_notes_tile">录制 Hex 笔记</string>
     <string name="voice_notes_record">录制笔记</string>
     <string name="voice_notes_listening">正在录音。停顿 3 秒即可结束。</string>
@@ -324,6 +326,9 @@
     <string name="voice_notes_empty">已保存的笔记将显示在这里。</string>
     <string name="voice_notes_no_matches">没有匹配的笔记。</string>
     <string name="voice_notes_read_failed">无法打开笔记。</string>
+    <string name="voice_notes_play_recording">播放录音</string>
+    <string name="voice_notes_stop_playback">停止播放</string>
+    <string name="voice_notes_play_failed">无法播放此录音。</string>
     <string name="voice_notes_delete">删除笔记</string>
     <string name="voice_notes_delete_confirm">删除这条笔记？</string>
     <string name="voice_notes_delete_failed">无法删除此笔记。</string>

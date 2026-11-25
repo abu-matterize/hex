@@ -176,6 +176,7 @@ internal fun HexSettings(setup: Setup, speech: SpeechPreferences, typing: Typing
     // Labs › Dictate from Quick Settings is the tile service's enabled state, not a preference.
     var quickDictation by remember { mutableStateOf(QuickDictation.enabled(context)) }
     var voiceNotes by remember { mutableStateOf(VoiceNotes.enabled(context)) }
+    val keepNoteRecordings = remember(revision) { speech.keepNoteRecordings }
     val keyColors = remember(revision) { typing.keyColors }
     val keyColor = remember(revision) { typing.keyColor }
     val testOnHome = remember(revision) { typing.testKeyboardOnHome }
@@ -473,6 +474,12 @@ internal fun HexSettings(setup: Setup, speech: SpeechPreferences, typing: Typing
                                     voiceNotes, noteLines = Int.MAX_VALUE) {
                                     VoiceNotes.setEnabled(context, it)
                                     voiceNotes = it
+                                }
+                                if (voiceNotes) {
+                                    Rule()
+                                    Toggle(stringResource(R.string.voice_notes_keep_recordings),
+                                        stringResource(R.string.voice_notes_keep_recordings_detail),
+                                        keepNoteRecordings, noteLines = Int.MAX_VALUE) { speech.keepNoteRecordings = it }
                                 }
                             }
                             Label(stringResource(R.string.labs_output), muted = true, size = 14,

@@ -1,12 +1,19 @@
 package ly.anoma.hex.notes
 
+import ly.anoma.hex.diagnostics.wavSamples
 import ly.anoma.hex.speech.SpeechEdges
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VoiceNotesTest {
+    @Test fun recordingWavPreservesOriginalSamples() {
+        val samples = shortArrayOf(0, 0, Short.MIN_VALUE, -1, 1, Short.MAX_VALUE, 0, 0)
+        assertArrayEquals(samples, wavSamples(voiceNoteWav(samples)))
+    }
+
     @Test fun searchUsesOnlyQuotedWordPrefixes() {
         assertEquals("\"Café*\" \"OR*\" \"fig*\" \"123*\"", noteSearch("Café OR \"fig*\" (123)"))
         assertEquals("", noteSearch("\"*:!()"))

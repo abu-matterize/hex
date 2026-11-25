@@ -39,6 +39,7 @@ import kotlinx.coroutines.withContext
 import ly.anoma.hex.Action
 import ly.anoma.hex.Card
 import ly.anoma.hex.DictationBar
+import ly.anoma.hex.Entry
 import ly.anoma.hex.HexTheme
 import ly.anoma.hex.Label
 import ly.anoma.hex.R
@@ -55,13 +56,16 @@ import ly.anoma.hex.speech.SpeechPreferences
 import ly.anoma.hex.speech.keepAwake
 
 class VoiceNotesActivity : ComponentActivity(), OfflineScreen {
+    private data class Draft(val text: String, val recordedAt: Long, val recording: ShortArray?)
+
     private val speech by lazy { SpeechPreferences(this) }
     private val store by lazy { VoiceNoteStore.get(this) }
+    private val playback by lazy { VoiceNotePlayback(this, lifecycleScope, store) }
     private val setup by lazy { getSharedPreferences("setup", MODE_PRIVATE) }
     private lateinit var capture: MicCapture
     private var phase by mutableStateOf(SpeechPhase.Idle)
     private var notice by mutableStateOf<String?>(null)
-    private var pending by mutableStateOf<String?>(null)
+    private var pending by mutableStateOf<Draft?>(null)
     private var saving by mutableStateOf(false)
     private var revision by mutableIntStateOf(0)
     private var recordedAt = 0L
@@ -84,8 +88,8 @@ class VoiceNotesActivity : ComponentActivity(), OfflineScreen {
                 window.keepAwake(next)
             },
             meter = {},
-            insert = { text, _, _, _ ->
-                pending = text
+            insert = { text, _, _, _, recording ->
+                pending = Draft(text, recordedAt, recording)
                 save()
             },
             stopAfterPauseMs = 3_000,
@@ -93,7 +97,7 @@ class VoiceNotesActivity : ComponentActivity(), OfflineScreen {
         recordOnFocus = savedInstanceState == null && VoiceNotes.startsRecording(intent)
         setContent {
             HexTheme {
-                VoiceNotesScreen(store, revision, phase, notice, pending, saving,
+                VoiceNotesScreen(store, playback, revision, phase, notice, pending?.text, saving,
                     begin = ::begin, finishRecording = capture::finish, cancel = capture::cancel,
                     retry = ::save, delete = ::delete, back = ::finish)
             }
@@ -119,6 +123,7 @@ class VoiceNotesActivity : ComponentActivity(), OfflineScreen {
 
     private fun begin() {
         if (!::capture.isInitialized || !VoiceNotes.enabled(this) || phase != SpeechPhase.Idle || pending != null) return
+        playback.stop()
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             if (setup.getBoolean("asked", false) && !shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)) {
                 startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
@@ -129,16 +134,17 @@ class VoiceNotesActivity : ComponentActivity(), OfflineScreen {
             return
         }
         recordedAt = System.currentTimeMillis()
-        capture.start(speech.options(null))
+        capture.start(speech.options(null), keepRecording = speech.keepNoteRecordings)
     }
 
     private fun save() {
-        val text = pending ?: return
+        val note = pending ?: return
         if (saving) return
         saving = true
-        val at = recordedAt
         lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO + NonCancellable) { runCatching { store.add(text, at) } }
+            val result = withContext(Dispatchers.IO + NonCancellable) {
+                runCatching { store.add(note.text, note.recordedAt, note.recording) }
+            }
             saving = false
             if (result.isSuccess) {
                 pending = null
@@ -149,6 +155,7 @@ class VoiceNotesActivity : ComponentActivity(), OfflineScreen {
     }
 
     private fun delete(id: Long) {
+        playback.stop()
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) { runCatching { store.delete(id) } }
             if (result.isSuccess) revision++
@@ -162,7 +169,10 @@ class VoiceNotesActivity : ComponentActivity(), OfflineScreen {
     }
     override fun onStop() {
         recordOnFocus = false
-        if (::capture.isInitialized) capture.cancel()
+        if (::capture.isInitialized) {
+            playback.stop()
+            capture.cancel()
+        }
         super.onStop()
     }
     override fun onDestroy() {
@@ -173,7 +183,8 @@ class VoiceNotesActivity : ComponentActivity(), OfflineScreen {
 
 @Composable
 private fun VoiceNotesScreen(
-    store: VoiceNoteStore, revision: Int, phase: SpeechPhase, notice: String?, pending: String?, saving: Boolean,
+    store: VoiceNoteStore, playback: VoiceNotePlayback, revision: Int, phase: SpeechPhase,
+    notice: String?, pending: String?, saving: Boolean,
     begin: () -> Unit, finishRecording: () -> Unit, cancel: () -> Unit, retry: () -> Unit,
     delete: (Long) -> Unit, back: () -> Unit,
 ) {
@@ -199,7 +210,10 @@ private fun VoiceNotesScreen(
     fun goBack() {
         when {
             confirmingDelete -> confirmingDelete = false
-            selectedId != null -> selectedId = null
+            selectedId != null -> {
+                playback.stop()
+                selectedId = null
+            }
             else -> back()
         }
     }
@@ -213,6 +227,13 @@ private fun VoiceNotesScreen(
             SettingsTitle(stringResource(R.string.voice_notes), back = ::goBack)
             if (selected != null && phase == SpeechPhase.Idle) {
                 Card(Modifier.weight(1f, fill = false)) {
+                    if (selected.hasRecording) {
+                        val action = if (playback.current == selected.id) R.string.voice_notes_stop_playback
+                            else R.string.voice_notes_play_recording
+                        val error = if (playback.failed == selected.id) stringResource(R.string.voice_notes_play_failed) else null
+                        Entry(stringResource(action), note = error, value = "", action = { playback.toggle(selected.id) })
+                        Rule()
+                    }
                     SelectionContainer(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Label(date(selected), muted = true, size = 13)
