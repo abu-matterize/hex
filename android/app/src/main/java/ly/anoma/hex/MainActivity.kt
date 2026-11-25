@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import ly.anoma.hex.keyboard.speechNote
+import ly.anoma.hex.notes.VoiceNotes
 import ly.anoma.hex.speech.*
 import ly.anoma.hex.typing.TypingPreferences
 import ly.anoma.hex.updates.Updates
@@ -92,6 +93,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        VoiceNotes.migrateShortcut(this)
         capture = MicCapture(LocalSpeech(applicationContext), DictationPlace.Home,
             // Home's Dictate bar too: onStop cancels, so the screen mustn't sleep mid-dictation.
             update = { next, reason -> phase = next; notice = speechNote(reason); window.keepAwake(next) },
@@ -259,6 +261,11 @@ private fun SetupScreen(page: Int, setup: Setup, go: (Int) -> Unit, ask: () -> U
                     }
                 } else {
                     val next = setup.next
+                    if (page == 1 && !setup.ready) {
+                        TextButton(onClick = { go(3) }, modifier = Modifier.align(Alignment.End)) {
+                            Text(stringResource(R.string.setup_skip))
+                        }
+                    }
                     Button(onClick = {
                         if (page == 2) { keyboard?.hide(); go(3) }
                         else {

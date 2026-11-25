@@ -53,13 +53,15 @@ internal class SpeechEdges(private val rate: Int = 16_000) {
         voice += n; end = at + n
         if (voice >= rate * SPEECH_MIN_MS / 1000) { if (first < 0) first = start; last = end }
     }
+
+    fun paused(count: Int, pauseMs: Int) = pauseMs > 0 && first >= 0 && count - last >= rate * pauseMs / 1000
 }
 
 /** Names a dictation's decode to whisper.cpp, in this process (Home and the keyboard share the model). */
 private val jobs = AtomicLong()
 
 /** Where a dictation was made, for Labs › Diagnostics' last dictation. */
-internal enum class DictationPlace { Keyboard, Home, QuickSettings }
+internal enum class DictationPlace { Keyboard, Home, QuickSettings, VoiceNotes }
 
 /** The speech model when ✓ was tapped: loaded before the dictation, loaded while the person spoke, still loading
  * (ready [DictationTimes.modelReadyMs] after ✓), loaded by the decode itself after ✓, or not known. */
@@ -101,6 +103,7 @@ internal class MicCapture(
     private val meter: (Float) -> Unit,
     /** The text, what was heard, the options it was written with and the field number [start] was given. */
     private val insert: (String, String, SpeechOptions, Int) -> Unit,
+    private val stopAfterPauseMs: Int = 0,
 ) {
     private class Ticket(val options: SpeechOptions, val field: Int) {
         val job = jobs.incrementAndGet()
@@ -303,6 +306,7 @@ internal class MicCapture(
                     lastUpdate = now
                     main.post { if (active === ticket && phase == SpeechPhase.Listening) meter(rms.toFloat()) }
                 }
+                if (edges.paused(count, stopAfterPauseMs)) break
             }
         } finally {
             try {

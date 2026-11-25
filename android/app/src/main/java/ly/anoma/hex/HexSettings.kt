@@ -46,6 +46,8 @@ import ly.anoma.hex.feedback.FeedbackForm
 import ly.anoma.hex.keyboard.KeyColor
 import ly.anoma.hex.keyboard.VoiceOnly
 import ly.anoma.hex.keyboard.KeyboardHeight
+import ly.anoma.hex.notes.VoiceNotes
+import ly.anoma.hex.notes.VoiceNotesActivity
 import ly.anoma.hex.speech.*
 import ly.anoma.hex.typing.AdaptiveTouchModel
 import ly.anoma.hex.typing.AdaptiveTouchStore
@@ -173,6 +175,7 @@ internal fun HexSettings(setup: Setup, speech: SpeechPreferences, typing: Typing
     val hexKeyLeft = remember(revision) { typing.hexKeyLeft }
     // Labs › Dictate from Quick Settings is the tile service's enabled state, not a preference.
     var quickDictation by remember { mutableStateOf(QuickDictation.enabled(context)) }
+    var voiceNotes by remember { mutableStateOf(VoiceNotes.enabled(context)) }
     val keyColors = remember(revision) { typing.keyColors }
     val keyColor = remember(revision) { typing.keyColor }
     val testOnHome = remember(revision) { typing.testKeyboardOnHome }
@@ -280,6 +283,12 @@ internal fun HexSettings(setup: Setup, speech: SpeechPreferences, typing: Typing
                         }) { practice = it }
                         Updates.HomeCard()
                         Card {
+                            if (voiceNotes) {
+                                Entry(stringResource(R.string.voice_notes), action = {
+                                    context.startActivity(Intent(context, VoiceNotesActivity::class.java))
+                                })
+                                Rule()
+                            }
                             listOf(Page.Dictation, Page.Keyboard, Page.Privacy, Page.Labs).forEachIndexed { i, dest ->
                                 if (i != 0) Rule()
                                 Entry(stringResource(dest.title), action = { open(dest) })
@@ -458,6 +467,12 @@ internal fun HexSettings(setup: Setup, speech: SpeechPreferences, typing: Typing
                                 Toggle(stringResource(R.string.quick_dictation), stringResource(R.string.quick_dictation_detail),
                                     quickDictation, noteLines = Int.MAX_VALUE) {
                                     QuickDictation.setEnabled(context, it); quickDictation = it
+                                }
+                                Rule()
+                                Toggle(stringResource(R.string.voice_notes), stringResource(R.string.voice_notes_detail),
+                                    voiceNotes, noteLines = Int.MAX_VALUE) {
+                                    VoiceNotes.setEnabled(context, it)
+                                    voiceNotes = it
                                 }
                             }
                             Label(stringResource(R.string.labs_output), muted = true, size = 14,

@@ -3250,6 +3250,19 @@ iOS prototype (`HEXMobile`) -> Record/transcribe/copy and keyboard handoff
 │   path receives none
 └── Proof limits: unit tests only; no CI compiles the iOS targets
 Android keyboard -> English, Spanish, German, Bokmål, French and Italian typing assistance
+├── Labs › Dictation › Voice notes (off) -> enables the Voice notes library and the Record Hex note
+│   Quick Settings tile. Tap the tile on an unlocked phone to start recording in the recorder's
+│   own task. The first launch after upgrading from the launcher entry transfers its enabled state
+│   to the tile. Skip for now in setup opens Home without picking the Hex keyboard. The recording finishes
+│   with Finish, three seconds of silence after speech, or the existing one-minute limit.
+│   Cancel or leave the screen to discard an unfinished recording. Hex transcribes on-device and
+│   saves the transcript and timestamp in private SQLite storage. Word and prefix searches show
+│   contextual excerpts and dates. Open the full note to read or delete it. Disabling the lab
+│   hides both entry points and preserves notes. No audio is saved. // android.voice-notes
+│   See notes/VoiceNotesActivity.kt, notes/VoiceNotesTile.kt, notes/VoiceNoteStore.kt, and speech/MicCapture.kt.
+│   VoiceNotesTest covers query escaping and silence after speech. On a Pixel 7a, the upgrade
+│   enabled the tile and removed the launcher entry. ADB added the tile to Quick Settings and
+│   confirmed Android's selected keyboard. A recording from the tile requires a live test.
 ├── Hands-free dictation keeps the screen on -> the keyboard's window and Home's add Android's
 │   `FLAG_KEEP_SCREEN_ON` (no permission) while a dictation is opening, listening or transcribing,
 │   and clear it once idle, so the display timing out can't hide the IME, whose leave cancels the

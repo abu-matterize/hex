@@ -1,0 +1,61 @@
+package ly.anoma.hex.notes
+
+import android.content.ContentValues
+import android.content.Context
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
+
+internal data class VoiceNote(val id: Long, val recordedAt: Long, val text: String, val excerpt: String)
+
+private val searchWord = Regex("[\\p{L}\\p{N}][\\p{L}\\p{M}\\p{N}]*")
+
+/** Treat punctuation and quoted operators as user text. FTS4 uses a trailing star inside the quotes for prefixes. */
+internal fun noteSearch(query: String): String =
+    searchWord.findAll(query).take(20).joinToString(" ") { "\"" + it.value + "*\"" }
+
+/** The FTS table owns both the transcript and its index, so each save or delete updates both atomically. */
+internal class VoiceNoteStore private constructor(context: Context) : SQLiteOpenHelper(context, "voice-notes.db", null, 1) {
+    override fun onCreate(db: SQLiteDatabase) {
+        db.execSQL("CREATE VIRTUAL TABLE voice_notes USING fts4(body, recorded_at, notindexed=recorded_at, tokenize=unicode61)")
+    }
+
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        error("Unsupported voice notes database upgrade from $oldVersion to $newVersion")
+    }
+
+    fun add(text: String, recordedAt: Long) {
+        val values = ContentValues().apply {
+            put("body", text)
+            put("recorded_at", recordedAt)
+        }
+        writableDatabase.insertOrThrow("voice_notes", null, values)
+    }
+
+    fun find(query: String): List<VoiceNote> {
+        val filter = noteSearch(query)
+        if (query.isNotBlank() && filter.isEmpty()) return emptyList()
+        val search = filter.isNotEmpty()
+        val excerpt = if (search) "snippet(voice_notes, '', '', ' … ', 0, 32)" else "substr(body, 1, 240)"
+        val where = if (search) " WHERE voice_notes MATCH ?" else ""
+        val arguments = if (search) arrayOf(filter) else null
+        return readableDatabase.rawQuery(
+            "SELECT rowid, recorded_at, body, $excerpt FROM voice_notes$where ORDER BY rowid DESC", arguments,
+        ).use { rows ->
+            buildList {
+                while (rows.moveToNext()) add(VoiceNote(rows.getLong(0), rows.getLong(1), rows.getString(2), rows.getString(3)))
+            }
+        }
+    }
+
+    fun delete(id: Long) {
+        writableDatabase.delete("voice_notes", "rowid = ?", arrayOf(id.toString()))
+    }
+
+    companion object {
+        private var instance: VoiceNoteStore? = null
+
+        @Synchronized
+        fun get(context: Context): VoiceNoteStore =
+            instance ?: VoiceNoteStore(context.applicationContext).also { instance = it }
+    }
+}

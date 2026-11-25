@@ -69,5 +69,19 @@
         <activity android:name=".QuickDictationActivity" android:exported="false" android:theme="@style/HexSheet"
             android:taskAffinity="" android:launchMode="singleTask" android:excludeFromRecents="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|uiMode|density|fontScale" />
+        <service android:name=".notes.VoiceNotesTile" android:exported="true" android:enabled="false"
+            android:label="@string/voice_notes_tile" android:icon="@drawable/hex_mark"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <!-- Quick Settings opens the recorder in its own task. -->
+        <activity android:name=".notes.VoiceNotesActivity" android:exported="false" android:launchMode="singleTask"
+            android:taskAffinity="${applicationId}.notes"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|uiMode|density|fontScale" />
+        <!-- Retain the old component state so the first launch can migrate the Voice notes toggle. -->
+        <activity-alias android:name=".notes.RecordVoiceNote" android:targetActivity=".notes.VoiceNotesActivity"
+            android:enabled="false" android:exported="false" />
     </application>
 </manifest>

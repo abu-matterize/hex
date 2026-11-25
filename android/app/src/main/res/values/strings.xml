@@ -341,6 +341,22 @@
     <!-- Labs › Dictate from Quick Settings: the Labs row, the tile's label and the sheet's lines. -->
     <string name="quick_dictation">Dictate from Quick Settings</string>
     <string name="quick_dictation_detail">Adds a Hex tile to Quick Settings. Tap it in any app, speak, and Hex copies the text for you to paste. For apps where Hex can’t be your keyboard, such as work apps.</string>
+    <string name="voice_notes">Voice notes</string>
+    <string name="voice_notes_detail">Record and search notes on this phone. Adds the Record Hex note tile to Quick Settings.</string>
+    <string name="voice_notes_tile">Record Hex note</string>
+    <string name="voice_notes_record">Record note</string>
+    <string name="voice_notes_listening">Listening. Pause for 3 seconds to finish.</string>
+    <string name="voice_notes_saving">Saving note…</string>
+    <string name="voice_notes_saved">Note saved on this phone.</string>
+    <string name="voice_notes_save_failed">Couldn’t save this note.</string>
+    <string name="voice_notes_retry">Retry save</string>
+    <string name="voice_notes_search">Search notes</string>
+    <string name="voice_notes_empty">Your saved notes will appear here.</string>
+    <string name="voice_notes_no_matches">No matching notes.</string>
+    <string name="voice_notes_read_failed">Couldn’t open your notes.</string>
+    <string name="voice_notes_delete">Delete note</string>
+    <string name="voice_notes_delete_confirm">Delete this note?</string>
+    <string name="voice_notes_delete_failed">Couldn’t delete this note.</string>
     <string name="quick_tile">Hex dictation</string>
     <string name="quick_hint">Speak, then tap Finish dictation</string>
     <string name="quick_copied">Copied. Paste it where you were typing.</string>
